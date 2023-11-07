@@ -13,6 +13,7 @@ use mljcl::{
     MalojaCredentials,
 };
 use ratatui::{prelude::*, widgets::*};
+use std::cmp::min;
 use std::{
     io::{self, stdout},
     time::Duration,
@@ -21,6 +22,9 @@ use std::{
 mod art_backends;
 
 use crate::art_backends::*;
+
+const MAX_ALBUM_HEIGHT: u32 = 8;
+const ALBUM_WIDTH: u32 = 16;
 
 struct AlbumCharts {
     albums: Vec<(String, String, u64, Option<AlbumArt>)>, // ID, Name, Rank
@@ -92,7 +96,7 @@ pub async fn main() -> io::Result<()> {
             .unwrap();
     let mut albums: Vec<(String, String, u64, Option<AlbumArt>)> = vec![];
 
-    album_charts.albums.truncate(4);
+    album_charts.albums.truncate(5);
     for album in album_charts.albums {
         albums.push((album.clone().0.id, album.clone().0.name, album.1, None));
         let album_client = client.clone();
@@ -133,7 +137,7 @@ fn handle_events() -> io::Result<bool> {
     Ok(false)
 }
 
-fn ui(frame: &mut Frame, app: &mut App) {
+fn main_menu(frame: &mut Frame, app: &mut App) {
     let main_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -166,11 +170,13 @@ fn ui(frame: &mut Frame, app: &mut App) {
         chart_sections[0].x + 1,
         chart_sections[0].y + 1,
         chart_sections[0].width - 2,
-        chart_sections[0].height + 1,
+        min((chart_sections[0].height + 1).into(), MAX_ALBUM_HEIGHT + 3)
+            .try_into()
+            .unwrap(),
     );
 
     frame.render_widget(
-        Block::default().borders(Borders::ALL).title(format!("Top Albums {}/4", app.albums.albums.len())),
+        Block::default().borders(Borders::ALL).title("Top Albums"),
         new_sec,
     );
 
@@ -181,25 +187,31 @@ fn ui(frame: &mut Frame, app: &mut App) {
             Constraint::Percentage(10),
             Constraint::Percentage(10),
             Constraint::Percentage(10),
+            Constraint::Percentage(10),
         ])
         .split(new_sec);
 
     let mut album_boxes: Vec<Rect> = vec![];
 
-    for i in 0..=3 {
+    for i in 0..=4 {
         album_boxes.push(ratatui::layout::Rect::new(
-            top_albums[i].x + 1 + (12u16 * i as u16),
+            top_albums[i].x + 1 + (MAX_ALBUM_HEIGHT as u16 * i as u16),
             top_albums[0].y,
-            16,
+            ALBUM_WIDTH.try_into().unwrap(),
             10,
         ));
     }
 
-    let mut album_num = 0;
-    for album in album_boxes {
-        let text = match app.albums.albums.get(album_num) {
-            Some(album) => match &album.3 {
-                Some(art) => art.display_string(),
+    for (album_num, album) in album_boxes.into_iter().enumerate() {
+        let text = match app.albums.albums.get_mut(album_num) {
+            Some(album) => match album.3 {
+                Some(ref mut art) => {
+                    let s = min((top_albums[0].height - 3).into(), MAX_ALBUM_HEIGHT);
+                    // It is very important to make sure this `art` is not a Clone. Otherwise we will re-render
+                    // album art every frame if the requested album art height isn't the default.
+                    let x: String = art.display_string_with_size(s, ALBUM_WIDTH);
+                    x
+                }
                 None => truncate(album.clone().1, 3),
             },
             None => "".to_string(),
@@ -210,7 +222,6 @@ fn ui(frame: &mut Frame, app: &mut App) {
 
         let block = Block::new().borders(Borders::NONE).title("");
         frame.render_widget(paragraph.clone().block(block), album);
-        album_num += 1;
     }
 
     let history_layout = Layout::default()
@@ -262,4 +273,8 @@ fn ui(frame: &mut Frame, app: &mut App) {
             }
         }
     }
+}
+
+fn ui(frame: &mut Frame, app: &mut App) {
+    main_menu(frame, app);
 }

@@ -3,6 +3,8 @@ use image::DynamicImage;
 use mljcl::{types::Album, MalojaCredentials};
 use rascii_art::RenderOptions;
 
+use crate::{ALBUM_WIDTH, MAX_ALBUM_HEIGHT};
+
 use bytes::Bytes;
 
 #[derive(Clone)]
@@ -23,7 +25,7 @@ pub fn truncate(string: String, max_len: usize) -> String {
     if string.len() <= max_len {
         string
     } else {
-        string.split_at(max_len - 1).0.to_owned() + &"…"
+        string.split_at(max_len - 1).0.to_owned() + "…"
     }
 }
 
@@ -45,7 +47,7 @@ impl AlbumArt {
                 if height == 1 {
                     return truncate(self.clone().name, width.try_into().unwrap());
                 }
-                if !(render.size == (height, width)) {
+                if render.size != (height, width) {
                     self.art = Some(CachedRender {
                         art: rascii(self.image.clone(), height, width),
                         size: (height, width),
@@ -60,9 +62,9 @@ impl AlbumArt {
 
 pub fn get_image(data: Bytes) -> Option<DynamicImage> {
     if let Ok(img) = image::load_from_memory(&data) {
-        return Some(img);
+        Some(img)
     } else {
-        return None;
+        None
     }
 }
 
@@ -89,13 +91,13 @@ pub async fn get_art_for(
         .unwrap();
     match get_image(bytes) {
         Some(image) => {
-            let bytes = rascii(image.clone(), 8, 16);
+            let bytes = rascii(image.clone(), MAX_ALBUM_HEIGHT, ALBUM_WIDTH);
             sender
                 .send(AlbumArt {
                     album_id: id,
                     art: Some(CachedRender {
                         art: bytes,
-                        size: (8, 16),
+                        size: (MAX_ALBUM_HEIGHT, ALBUM_WIDTH),
                     }),
                     name: album.0.name,
                     image,
