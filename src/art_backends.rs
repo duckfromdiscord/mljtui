@@ -1,6 +1,6 @@
 use crossbeam::channel::Sender;
 use image::DynamicImage;
-use mljcl::{types::Album, MalojaCredentials};
+use mljcl::{types::Album, credentials::MalojaCredentials};
 use rascii_art::RenderOptions;
 
 use crate::{ALBUM_WIDTH, MAX_ALBUM_HEIGHT};

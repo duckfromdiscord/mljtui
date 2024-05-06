@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 ratatui = "0.24.0"
-mljcl = { git = "https://github.com/duckfromdiscord/mljcl" }
+mljcl = { version = "1.0.0", git = "https://github.com/duckfromdiscord/mljcl" }
 clap = "4.4.7"
 crossterm = "0.27.0"
 rascii_art = "0.4.5"

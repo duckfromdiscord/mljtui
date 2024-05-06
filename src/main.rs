@@ -10,7 +10,7 @@ use mljcl::{
     charts,
     history::{scrobbles_async, Scrobble},
     range::Range,
-    MalojaCredentials,
+    credentials::MalojaCredentialsBuilder,
 };
 use ratatui::{prelude::*, widgets::*};
 use std::cmp::min;
@@ -60,22 +60,25 @@ pub async fn main() -> io::Result<()> {
         )
         .get_matches();
 
-    let creds = MalojaCredentials {
-        https: matches.get_flag("https"),
-        skip_cert_verification: matches.get_flag("https"),
-        ip: matches
-            .get_one::<String>("ip")
-            .expect("IP required")
-            .to_string(),
-        port: matches
-            .get_one::<String>("port")
-            .unwrap_or(&"42010".to_string())
-            .parse::<u16>()
-            .expect("Port must be an integer between 1-65535"),
-        api_key: None,
-    };
+    let creds = MalojaCredentialsBuilder::new()
+    .https(matches.get_flag("https"))
+    .skip_cert_verification(matches.get_flag("https"))
+    .ip(
+        matches
+        .get_one::<String>("ip")
+        .expect("IP required")
+        .to_string(),
+    )
+    .port(
+        matches
+        .get_one::<String>("port")
+        .unwrap_or(&"42010".to_string())
+        .parse::<u16>()
+        .expect("Port must be an integer between 1-65535")
+    )
+    .build().unwrap();
 
-    let client = mljcl::get_client_async(&creds);
+    let client = mljcl::get_client_async(&creds).unwrap();
     let mut recent_scrobbles = scrobbles_async(
         None,
         Range::AllTime,
